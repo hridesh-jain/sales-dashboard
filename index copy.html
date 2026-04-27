@@ -1,0 +1,962 @@
+<!DOCTYPE html><script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "T0 Deal Execution Audit",
+  "schemaVersion": 1,
+  "description": "CEO-ready T0 active deal execution audit (week of Apr 20–26, 2026). Two tabs (T0 / non-T0), owner filter, drill-down from aggregated execution patterns to deal-level evidence, top-5 highest-risk deals, systemic coaching gaps, and a comments capability. Built from HubSpot deal records + Slack discussions + Avoma meeting context."
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>T0 Active Deal Execution Audit — Week of Apr 20–26, 2026</title>
+<style>
+:root { color-scheme: light; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;background:#f6f7f9;color:#1f2933;line-height:1.5;padding:18px;font-size:14px}
+.wrap{max-width:1280px;margin:0 auto}
+h1{font-size:22px;font-weight:600;color:#1c2733;margin-bottom:4px;letter-spacing:-0.2px}
+h2{font-size:16px;font-weight:600;color:#293544;margin-bottom:10px}
+h3{font-size:13px;font-weight:600;color:#4a5664;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.sub{color:#697585;font-size:12.5px;margin-bottom:16px}
+.card{background:#fff;border:1px solid #e2e6ec;border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,30,55,0.03)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid #e2e6ec;border-radius:10px;padding:14px}
+.kpi .lbl{font-size:11px;color:#697585;text-transform:uppercase;letter-spacing:0.4px}
+.kpi .val{font-size:22px;font-weight:600;color:#1c2733;margin-top:4px}
+.kpi .delta{font-size:11.5px;color:#7a8693;margin-top:2px}
+.kpi.red .val{color:#a8413f}.kpi.amber .val{color:#aa6a2c}.kpi.green .val{color:#3d7a4a}.kpi.blue .val{color:#3d6594}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid #e2e6ec}
+.tab{padding:9px 16px;cursor:pointer;color:#697585;border-bottom:2px solid transparent;font-weight:500;font-size:13px}
+.tab.active{color:#1c2733;border-bottom-color:#3d6594}
+.filterbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:#fff;border:1px solid #e2e6ec;border-radius:10px;padding:10px 14px}
+.filterbar label{font-size:12px;color:#697585;font-weight:500;margin-right:4px}
+.filterbar select,.filterbar input{font-size:13px;padding:6px 10px;border:1px solid #d4d9e0;border-radius:6px;background:#fafbfc;color:#1f2933;font-family:inherit}
+.filterbar .pill{background:#eef1f5;color:#4a5664;font-size:11.5px;padding:3px 8px;border-radius:10px}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+@media (max-width: 980px){.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+.pattern{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #eef1f5;cursor:pointer;transition:background 0.1s}
+.pattern:last-child{border-bottom:none}
+.pattern:hover{background:#fafbfc;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px}
+.pattern .pname{font-weight:500;color:#293544;font-size:13.5px}
+.pattern .pdesc{color:#7a8693;font-size:12px;margin-top:2px}
+.pattern .pcount{font-weight:600;font-size:18px;padding:2px 12px;border-radius:8px;min-width:42px;text-align:center}
+.pcount.high{background:#fbe9e8;color:#a8413f}
+.pcount.med{background:#fcf2e2;color:#aa6a2c}
+.pcount.low{background:#e6eef6;color:#3d6594}
+.drilldown{background:#f9fafc;border-radius:8px;padding:12px;margin-top:10px;display:none;border-left:3px solid #c8d1dd}
+.drilldown.show{display:block}
+.drilldown ul{list-style:none}
+.drilldown li{padding:6px 0;font-size:12.5px;color:#4a5664;border-bottom:1px dashed #e2e6ec}
+.drilldown li:last-child{border-bottom:none}
+.drilldown li b{color:#1c2733;font-weight:600}
+.drilldown a{color:#3d6594;text-decoration:none;font-size:12px}
+.drilldown a:hover{text-decoration:underline}
+.deal{border:1px solid #e2e6ec;border-radius:10px;margin-bottom:10px;background:#fff;overflow:hidden}
+.deal.hidden{display:none}
+.deal-head{padding:12px 16px;cursor:pointer;display:grid;grid-template-columns:1fr auto auto auto auto;gap:14px;align-items:center;border-left:4px solid transparent}
+.deal-head.risk-high{border-left-color:#c46562}
+.deal-head.risk-med{border-left-color:#d4915a}
+.deal-head.risk-low{border-left-color:#7d9eaf}
+.deal-head:hover{background:#fafbfc}
+.deal-name{font-weight:600;color:#1c2733;font-size:14px}
+.deal-meta{font-size:11.5px;color:#7a8693;margin-top:2px}
+.deal-amount{font-weight:600;color:#293544;font-size:13.5px}
+.deal-stage{font-size:11px;background:#eef1f5;color:#4a5664;padding:3px 9px;border-radius:10px;white-space:nowrap}
+.deal-owner{font-size:12px;color:#4a5664}
+.risk-badge{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:8px;letter-spacing:0.4px}
+.risk-badge.h{background:#fbe9e8;color:#a8413f}
+.risk-badge.m{background:#fcf2e2;color:#aa6a2c}
+.risk-badge.l{background:#e6eef6;color:#3d6594}
+.deal-body{display:none;padding:0 16px 14px 16px;border-top:1px solid #eef1f5;background:#fafbfc}
+.deal-body.show{display:block}
+.section{margin-top:14px}
+.section h4{font-size:11.5px;font-weight:700;color:#4a5664;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.gap{padding:9px 11px;background:#fff;border-radius:6px;border:1px solid #eef1f5;margin-bottom:6px;font-size:12.5px}
+.gap b{color:#1c2733}
+.sev{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-right:6px;text-transform:uppercase;letter-spacing:0.3px;vertical-align:middle}
+.sev.h{background:#fbe9e8;color:#a8413f}
+.sev.m{background:#fcf2e2;color:#aa6a2c}
+.sev.l{background:#e6eef6;color:#3d6594}
+.evidence{font-size:11.5px;color:#7a8693;margin-top:4px;font-style:italic}
+.action{font-size:12px;color:#3d7a4a;margin-top:4px}
+.audit-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px}
+.audit-cell{padding:5px;text-align:center;border-radius:5px;font-size:10.5px;font-weight:600;color:#fff}
+.audit-cell.green{background:#7ba788}
+.audit-cell.amber{background:#cf9c6f}
+.audit-cell.red{background:#c87f7b}
+.audit-cell.gray{background:#bbc4ce}
+.audit-cell .lbl{font-size:9px;display:block;font-weight:500;opacity:0.95;margin-bottom:2px}
+.comments{margin-top:14px;padding:11px;background:#fff;border:1px solid #eef1f5;border-radius:8px}
+.comment{padding:7px 0;border-bottom:1px dashed #e2e6ec;font-size:12.5px}
+.comment:last-child{border-bottom:none}
+.comment .meta{font-size:11px;color:#7a8693;margin-bottom:2px}
+.comment-form{display:flex;gap:6px;margin-top:8px}
+.comment-form input{flex:1;padding:7px 10px;border:1px solid #d4d9e0;border-radius:6px;font-size:12.5px;font-family:inherit}
+.comment-form button{padding:7px 14px;background:#3d6594;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500}
+.comment-form button:hover{background:#34537a}
+.top5{margin-top:0}
+.top5 .item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #eef1f5}
+.top5 .item:last-child{border-bottom:none}
+.top5 .rank{font-size:18px;font-weight:700;color:#a8413f;width:24px}
+.top5 .why{font-size:11.5px;color:#7a8693;margin-top:2px}
+.coaching-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.coach-item{padding:10px;background:#fafbfc;border-radius:7px;border:1px solid #eef1f5}
+.coach-item .ct{font-weight:600;font-size:13px;color:#293544;margin-bottom:3px}
+.coach-item .cd{font-size:12px;color:#697585}
+.banner{padding:12px 14px;background:#fcf2e2;border-left:3px solid #d4915a;border-radius:6px;margin-bottom:14px;font-size:12.5px;color:#5a4220}
+.banner b{color:#3a2912}
+.exec-summary{padding:14px;background:#fafbfc;border-radius:8px;margin-bottom:14px;font-size:12.5px;color:#4a5664;line-height:1.65}
+.exec-summary b{color:#1c2733}
+.fwd-risk{padding:9px 11px;background:#fff;border-radius:6px;border:1px solid #eef1f5;margin-bottom:6px;font-size:12.5px}
+.fwd-risk .pl{color:#1c2733;font-weight:600}
+.fwd-risk .det{font-size:11.5px;color:#697585;margin-top:3px}
+.opsplaybook{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+.ops-item{padding:11px;background:#fafbfc;border-radius:7px;border:1px solid #eef1f5}
+.ops-item .h{font-weight:600;font-size:12.5px;color:#293544;margin-bottom:4px}
+.ops-item .b{font-size:12px;color:#697585}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.score-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#eef1f5;margin-top:4px}
+.sb-r{background:#c87f7b}.sb-a{background:#cf9c6f}.sb-g{background:#7ba788}
+small.muted{color:#7a8693;font-size:11px}
+.legend{display:flex;gap:14px;font-size:11px;color:#7a8693;margin-top:4px}
+.legend .ld{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>T0 Active Deal Execution Audit</h1>
+<div class="sub">Week of Apr 20–26, 2026 · Truth-first review across HubSpot, Avoma, Slack · CEO-ready · No sugarcoating</div>
+
+<div class="banner"><b>The unvarnished read:</b> 12 T0 active deals worth ~$1.02M in pipeline. <b>7 of 12 (58%) have at least one high-severity execution failure</b> — ghosting, single-threading, lost champions, or "we don't expect to win" deals still cluttering the pipeline. <b>2 deals (Capital One, Healthtrust) should be qualified out</b>; the rep on Capital One has explicitly said "we don't expect to win" yet it sits in stage. <b>4 deals are silently rotting</b> (Randstad 45d, Kelly 66d, Soprasteria 62d, Capital One in SQA since May 2025). Only Benchmark Senior Living shows hand-on-the-wheel execution this week, and even that one is single-threaded.</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="lbl">T0 Active Deals</div><div class="val">12</div><div class="delta">SQA · Solution Confirmed · Pricing</div></div>
+  <div class="kpi blue"><div class="lbl">T0 Pipeline Value</div><div class="val">$1.02M</div><div class="delta">Sum of deal amounts</div></div>
+  <div class="kpi red"><div class="lbl">High-risk Deals</div><div class="val">7</div><div class="delta">≥1 high-severity gap</div></div>
+  <div class="kpi amber"><div class="lbl">Stale &gt;30d</div><div class="val">4</div><div class="delta">No client contact 30+ days</div></div>
+  <div class="kpi green"><div class="lbl">Healthy Velocity</div><div class="val">3</div><div class="delta">Active &amp; multi-threaded</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="t0" onclick="setTab('t0')">T0 Active Deals (12)</div>
+  <div class="tab" data-tab="nont0" onclick="setTab('nont0')">Non-T0 Active Deals (57)</div>
+  <div class="tab" data-tab="ops" onclick="setTab('ops')">Sales Ops Action Plan</div>
+</div>
+
+<!-- ========== T0 TAB ========== -->
+<div id="tab-t0" class="tab-content active">
+
+<div class="filterbar">
+  <label>Owner:</label>
+  <select id="ownerFilter" onchange="applyFilters()">
+    <option value="all">All owners</option>
+    <option value="Brendan Macomber">Brendan Macomber (3)</option>
+    <option value="Steve Pisarra">Steve Pisarra (3)</option>
+    <option value="Jesse Ofner">Jesse Ofner (2)</option>
+    <option value="Deborah Andrychuk">Deborah Andrychuk (1)</option>
+    <option value="Yazad Dalal">Yazad Dalal (1)</option>
+    <option value="Scott Garrett">Scott Garrett (1)</option>
+  </select>
+  <label>Stage:</label>
+  <select id="stageFilter" onchange="applyFilters()">
+    <option value="all">All stages</option>
+    <option value="SQA">SQA</option>
+    <option value="Solution Confirmed">Solution Confirmed</option>
+    <option value="Pricing & Proposal">Pricing &amp; Proposal</option>
+  </select>
+  <label>Risk:</label>
+  <select id="riskFilter" onchange="applyFilters()">
+    <option value="all">All risk levels</option>
+    <option value="high">High risk only</option>
+    <option value="med">Medium risk only</option>
+    <option value="low">Low risk only</option>
+  </select>
+  <span class="pill" id="visibleCount">12 deals shown</span>
+</div>
+
+<div class="grid2">
+  <!-- LEFT: Aggregated Patterns + Top5 -->
+  <div>
+
+    <div class="card">
+      <h2>Most Common Execution Failures</h2>
+      <small class="muted">Click a pattern to see exactly which deals are affected</small>
+
+      <div class="pattern" onclick="toggleDD('p1')">
+        <div><div class="pname">Pipeline rot / ghosting (no client contact 30+ days)</div><div class="pdesc">Rep is not chasing; deal not qualified out either</div></div>
+        <div class="pcount high">4</div>
+      </div>
+      <div class="drilldown" id="dd-p1">
+        <ul>
+          <li><b>Kelly Services</b> — Last contacted Feb 20 (66 days). Key contact Ed Pederson announced he's leaving. Owner: Brendan Macomber. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/38284462734" target="_blank">Open deal</a></li>
+          <li><b>Soprasteria SSCL</b> — Last contacted Feb 24 (62 days). Close date is May 29 (32 days). Owner: Yazad Dalal. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/28699497351" target="_blank">Open deal</a></li>
+          <li><b>Randstad – Prog RFP</b> — Last contacted Mar 13 (45 days). Stage SQA at 10% probability after 3 months. Owner: Brendan Macomber. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/55031047569" target="_blank">Open deal</a></li>
+          <li><b>Capital One</b> — In SQA since May 2025 (~12 months). Rep notes "we don't expect to win". Owner: Steve Pisarra. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/38281928631" target="_blank">Open deal</a></li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p2')">
+        <div><div class="pname">Single-threading / no economic buyer confirmed</div><div class="pdesc">One contact carrying the entire deal; champion fragility</div></div>
+        <div class="pcount high">5</div>
+      </div>
+      <div class="drilldown" id="dd-p2">
+        <ul>
+          <li><b>Benchmark Senior Living</b> — Only Kevin Loughran (2 months in role) coordinating marketing/IT/recruiters/ops. Hridesh has explicitly flagged this. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/58685790592" target="_blank">Open</a></li>
+          <li><b>Capital One</b> — Single thread to Stephen Maxie (sourcing manager); decision is with recruiting leadership we have not met. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/38281928631" target="_blank">Open</a></li>
+          <li><b>UPS</b> — No multi-stakeholder engagement visible in HubSpot or Slack. Owner: Scott Garrett. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/19934169903" target="_blank">Open</a></li>
+          <li><b>Randstad</b> — Static contact set, no expansion. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/55031047569" target="_blank">Open</a></li>
+          <li><b>Givaudan</b> — Only Taha + Jesse internally on RFP; no buyer-side multi-thread. <a href="https://app.hubspot.com/contacts/5843407/record/0-3/56549269937" target="_blank">Open</a></li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p3')">
+        <div><div class="pname">Champion compromised or contact lost</div><div class="pdesc">Champion left, never won, or lukewarm</div></div>
+        <div class="pcount high">3</div>
+      </div>
+      <div class="drilldown" id="dd-p3">
+        <ul>
+          <li><b>Kelly Services</b> — Ed Pederson (key contact) announced exit per Jennifer Smith on Slack (#kelly-services-rfp-oppty).</li>
+          <li><b>Healthtrust Workforce Solutions</b> — Lost original champions; new contact Amanda Schweikhard "wasn't overly impressed" with Joveo per Brendan in #healthtrust-winback-strategy.</li>
+          <li><b>Benchmark Senior Living</b> — Kevin Loughran is 2 months in role; not yet validated as champion w/ access + incentive.</li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p4')">
+        <div><div class="pname">Stage misalignment / probability inflation</div><div class="pdesc">Deal stage doesn't match real customer state</div></div>
+        <div class="pcount med">4</div>
+      </div>
+      <div class="drilldown" id="dd-p4">
+        <ul>
+          <li><b>Medline ($180K)</b> — In Solution Confirmed @ 30% but Deb has confirmed in Slack that "next step would be closer to end of year with an RFP". Should regress to SQA or be closed and re-opened.</li>
+          <li><b>Kelly Services</b> — In SQA @ 10% with close date Nov 27 — 7 months out — and no recent meetings.</li>
+          <li><b>Capital One</b> — In SQA @ 10% with rep stating they don't expect to win. RFI not even due till July 15.</li>
+          <li><b>Givaudan ($3.5K T0)</b> — Tier T0 doesn't match $3.5K deal size. T0 tagging discipline broken.</li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p5')">
+        <div><div class="pname">Late competitor entry / unmanaged competition</div><div class="pdesc">Competition surfaced late or no battle plan</div></div>
+        <div class="pcount med">4</div>
+      </div>
+      <div class="drilldown" id="dd-p5">
+        <ul>
+          <li><b>Givaudan</b> — Phenom now in mix — wasn't there during Feb RFI per Jesse in #sap-partnership.</li>
+          <li><b>Medline</b> — Multi-front competition: Agencies, Appcast, Beamery, Paradox. No documented win plan vs. all four.</li>
+          <li><b>Healthtrust</b> — Appcast incumbent + champion's "hands tied with Appcast" — competitive lock-in not addressed.</li>
+          <li><b>Capital One</b> — DirectEmployers as the very-likely incumbent advantage; rep already conceded.</li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p6')">
+        <div><div class="pname">T0 process violations (account strategy / coverage)</div><div class="pdesc">Documented T0 standards not followed</div></div>
+        <div class="pcount med">3</div>
+      </div>
+      <div class="drilldown" id="dd-p6">
+        <ul>
+          <li><b>Teleperformance</b> — KSJ called this out: "T0 rule was that any T0 will have you and Naren" — neither Deb nor Yaz on the call. No account strategy notes shared.</li>
+          <li><b>Givaudan</b> — Tier T0 with $3.5K amount; T0 tagging integrity issue.</li>
+          <li><b>Healthtrust</b> — Tier T0 with $17.5K amount + already-cool champion. Doesn't pass T0 sniff test.</li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p7')">
+        <div><div class="pname">Slow/missed follow-ups inside the past 7 days</div><div class="pdesc">Last week's commitments not honored</div></div>
+        <div class="pcount low">2</div>
+      </div>
+      <div class="drilldown" id="dd-p7">
+        <ul>
+          <li><b>Teleperformance</b> — Apr 30 meeting was rescheduled; no documented re-engagement plan to recover momentum.</li>
+          <li><b>Givaudan</b> — RFP just received Apr 15; only "Taha and Jesse to review" — 12 days later no response strategy in HubSpot next-step.</li>
+        </ul>
+      </div>
+
+      <div class="pattern" onclick="toggleDD('p8')">
+        <div><div class="pname">Procurement / legal not engaged early</div><div class="pdesc">Risk of late-stage surprise on RFP-led deals</div></div>
+        <div class="pcount med">5</div>
+      </div>
+      <div class="drilldown" id="dd-p8">
+        <ul>
+          <li><b>Capital One</b> — Coupa procurement system involved but legal/InfoSec timeline not mapped.</li>
+          <li><b>Maximus</b> — Closes this week; phased approach due to Avature integration but procurement/legal path not documented.</li>
+          <li><b>Givaudan</b> — RFP legalese still being worked through.</li>
+          <li><b>Randstad / Kelly Services</b> — Both RFP-driven, no procurement contact mapped.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card top5">
+      <h2>Top 5 Highest-Risk Deals This Week</h2>
+      <small class="muted">Most likely to slip, fail, or expose pipeline integrity issues in the next 7 days</small>
+
+      <div class="item">
+        <div class="rank">1</div>
+        <div>
+          <div class="deal-name">Maximus – Prog RFP · $70K · Pricing &amp; Proposal</div>
+          <div class="why">Close date Apr 30 (this week). Phased rollout needed because Avature integration can't ship at launch. KJ has explicitly flagged risk. Procurement/legal path undocumented.</div>
+        </div>
+        <div><span class="risk-badge h">Critical</span></div>
+      </div>
+
+      <div class="item">
+        <div class="rank">2</div>
+        <div>
+          <div class="deal-name">Capital One – RFP · $29K · SQA</div>
+          <div class="why">Rep wrote in Slack "we don't expect to win this RFP. We suspect they will just go directly to DirectEmployers." Yet the deal sits in pipeline corrupting forecast. SQA since May 2025.</div>
+        </div>
+        <div><span class="risk-badge h">Disqualify</span></div>
+      </div>
+
+      <div class="item">
+        <div class="rank">3</div>
+        <div>
+          <div class="deal-name">Kelly Services – Prog RFP · $105K · SQA</div>
+          <div class="why">66-day silence. Key contact Ed Pederson announced he is leaving Kelly. Yazad's report shows only 2 valid meetings in entire deal history (Aug 2025). Brendan now pivoting to "AI Interviewer + lunch" — restart, not continuation.</div>
+        </div>
+        <div><span class="risk-badge h">High</span></div>
+      </div>
+
+      <div class="item">
+        <div class="rank">4</div>
+        <div>
+          <div class="deal-name">Randstad – Prog RFP · $105K · SQA</div>
+          <div class="why">45 days no contact. Stage probability stuck at 10% since January. No champion identified, no economic buyer mapped. Will close-lost itself if not actioned.</div>
+        </div>
+        <div><span class="risk-badge h">High</span></div>
+      </div>
+
+      <div class="item">
+        <div class="rank">5</div>
+        <div>
+          <div class="deal-name">Soprasteria SSCL – Prog;CRM;CMS · $55K · Solution Confirmed</div>
+          <div class="why">62 days no contact and close date is May 29 — one month away. Either it's already closed-lost in the customer's mind or it isn't really at Solution Confirmed.</div>
+        </div>
+        <div><span class="risk-badge h">High</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Systemic Team Coaching Gaps</h2>
+      <small class="muted">What this team must improve immediately</small>
+      <div class="coaching-grid" style="margin-top:10px">
+        <div class="coach-item"><div class="ct">1. Pipeline hygiene discipline</div><div class="cd">Deals are not being progressed OR closed-lost. They sit in stage. Brendan owns 3 ghost deals; Yazad owns 1; Steve owns 1 (Capital One).</div></div>
+        <div class="coach-item"><div class="ct">2. Multi-threading muscle</div><div class="cd">5 of 12 T0 deals are single-threaded. Default playbook should require 4–6 stakeholders mapped before stage 2; today &lt;30% comply.</div></div>
+        <div class="coach-item"><div class="ct">3. Stage-discipline / forecast integrity</div><div class="cd">Deal probabilities don't reflect reality (Capital One, Medline, Kelly, Givaudan all wrong). Forecast cannot be trusted at deal level.</div></div>
+        <div class="coach-item"><div class="ct">4. Champion validation</div><div class="cd">Healthtrust + Kelly + Benchmark all have unvalidated or compromised champions. We don't formally check influence + access + incentive.</div></div>
+        <div class="coach-item"><div class="ct">5. T0 process adherence</div><div class="cd">T0 strategy ritual (Naren + Deb on every T0 call, account strategy notes) was violated at Teleperformance. T0 tagging itself is broken (Givaudan $3.5K).</div></div>
+        <div class="coach-item"><div class="ct">6. Procurement/legal anticipation</div><div class="cd">5 deals are RFP-led, none have a documented procurement/legal/InfoSec path. Maximus closes this week and we still can't show a phased contract structure.</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Owner snapshot + filtered deal list (header) -->
+  <div>
+    <div class="card">
+      <h2>Owner Performance Snapshot</h2>
+      <small class="muted">T0 deal count · pipeline · high-risk count</small>
+      <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px">
+        <thead>
+          <tr style="border-bottom:1px solid #e2e6ec;color:#697585;text-transform:uppercase;font-size:11px;letter-spacing:0.4px">
+            <th style="text-align:left;padding:6px 0">Owner</th><th style="text-align:right">Deals</th><th style="text-align:right">$ Pipeline</th><th style="text-align:right">High-risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eef1f5"><td style="padding:7px 0">Brendan Macomber</td><td style="text-align:right">3</td><td style="text-align:right">$192.5K</td><td style="text-align:right;color:#a8413f;font-weight:600">3</td></tr>
+          <tr style="border-bottom:1px solid #eef1f5"><td style="padding:7px 0">Steve Pisarra</td><td style="text-align:right">3</td><td style="text-align:right">$217.1K</td><td style="text-align:right;color:#aa6a2c;font-weight:600">2</td></tr>
+          <tr style="border-bottom:1px solid #eef1f5"><td style="padding:7px 0">Jesse Ofner</td><td style="text-align:right">2</td><td style="text-align:right">$91.0K</td><td style="text-align:right;color:#aa6a2c;font-weight:600">1</td></tr>
+          <tr style="border-bottom:1px solid #eef1f5"><td style="padding:7px 0">Deborah Andrychuk</td><td style="text-align:right">1</td><td style="text-align:right">$180.0K</td><td style="text-align:right;color:#aa6a2c;font-weight:600">1</td></tr>
+          <tr style="border-bottom:1px solid #eef1f5"><td style="padding:7px 0">Yazad Dalal</td><td style="text-align:right">1</td><td style="text-align:right">$55.0K</td><td style="text-align:right;color:#a8413f;font-weight:600">1</td></tr>
+          <tr><td style="padding:7px 0">Scott Garrett</td><td style="text-align:right">1</td><td style="text-align:right">$175.0K</td><td style="text-align:right;color:#aa6a2c;font-weight:600">1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>What I'd do as Sales-Ops Leader (this week)</h2>
+      <ol style="padding-left:18px;font-size:12.5px;color:#4a5664;line-height:1.75">
+        <li><b>Mandatory close-lost / re-qualify call</b> for Capital One, Randstad, Kelly, Soprasteria — by EOD Tuesday. Either move them or kill them; no purgatory.</li>
+        <li><b>Maximus war-room</b> Monday morning — Brendan + Naren + Legal on one Zoom, mapping phased contract + procurement plan before EOW close.</li>
+        <li><b>Benchmark multi-threading sprint</b> — Steve to deliver 3 new buyer-side stakeholders by Friday; assign Deb as exec sponsor coverage given Hridesh's flag.</li>
+        <li><b>Auto-rule</b>: any T0 deal with no client contact in 14 days fires a Slack alert to the rep + manager + me; 21 days fires CEO alert.</li>
+        <li><b>T0 tagging audit</b> — strip Givaudan and Healthtrust off the T0 list this week; T0 should mean ICP fit + ≥$50K + active intent. Re-tier, re-forecast, re-prioritize.</li>
+        <li><b>Stage-probability fix</b> — Medline regress to SQA (RFP not till EOY); update deal stages on Kelly/Capital One to reflect reality; clean before next forecast call.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- DEAL CARDS (T0) -->
+<div id="dealList"></div>
+
+</div>
+
+<!-- ========== NON-T0 TAB ========== -->
+<div id="tab-nont0" class="tab-content">
+
+<div class="banner"><b>Non-T0 read:</b> 57 active deals across T1 / T2 / T3 / AI Product Deal / Untiered (excluding Product Partnership and Collin Osburn). Audit signals here are <b>auto-derived from HubSpot data</b> — staleness, deal score, stage vs. close date, amount vs. tier. Senior-review depth (Slack/Avoma triangulation) applies to T0 only — but these signals are sufficient to flag the obvious rot. <b>Rough cut:</b> ~22 deals are >30 days stale, ~14 deals score below the healthy 25 threshold, ~6 have close dates already in the past.</div>
+
+<div class="filterbar">
+  <label>Owner:</label>
+  <select id="ownerFilterNT" onchange="applyFiltersNT()">
+    <option value="all">All owners</option>
+    <option value="Brendan Macomber">Brendan Macomber</option>
+    <option value="Steve Pisarra">Steve Pisarra</option>
+    <option value="Jesse Ofner">Jesse Ofner</option>
+    <option value="Deborah Andrychuk">Deborah Andrychuk</option>
+    <option value="Yazad Dalal">Yazad Dalal</option>
+    <option value="Scott Garrett">Scott Garrett</option>
+    <option value="Satyam Singh">Satyam Singh</option>
+    <option value="Mike Dingman">Mike Dingman</option>
+    <option value="Prateek Mishra">Prateek Mishra</option>
+  </select>
+  <label>Tier:</label>
+  <select id="tierFilterNT" onchange="applyFiltersNT()">
+    <option value="all">All non-T0 tiers</option>
+    <option value="T1">T1</option>
+    <option value="T2">T2</option>
+    <option value="T3">T3</option>
+    <option value="AI Product Deal">AI Product Deal</option>
+    <option value="Untiered">Untiered</option>
+  </select>
+  <label>Stage:</label>
+  <select id="stageFilterNT" onchange="applyFiltersNT()">
+    <option value="all">All stages</option>
+    <option value="SQA">SQA</option>
+    <option value="Solution Confirmed">Solution Confirmed</option>
+    <option value="Pricing & Proposal">Pricing &amp; Proposal</option>
+  </select>
+  <label>Risk:</label>
+  <select id="riskFilterNT" onchange="applyFiltersNT()">
+    <option value="all">All risk levels</option>
+    <option value="high">High risk only</option>
+    <option value="med">Medium risk only</option>
+    <option value="low">Healthy only</option>
+  </select>
+  <span class="pill" id="visibleCountNT">57 deals shown</span>
+</div>
+
+<div class="card">
+  <h2>Non-T0 Deal-by-Deal Audit</h2>
+  <small class="muted">Click any deal to see its 7-dimension audit lens, derived gaps, forward risks, and add a comment. Sorted by risk severity then deal score.</small>
+  <div id="dealListNT" style="margin-top:10px"></div>
+</div>
+
+</div>
+
+<!-- ========== OPS TAB ========== -->
+<div id="tab-ops" class="tab-content">
+  <div class="card">
+    <h2>Sales Ops Action Plan — Week of Apr 27, 2026</h2>
+    <small class="muted">Concrete owner-and-deadline list to drive change</small>
+
+    <div class="opsplaybook">
+      <div class="ops-item"><div class="h">Mon · Maximus war-room</div><div class="b">Brendan + Naren + Legal/Yoke. Map phased rollout + procurement contact for the Avature integration timeline. Output: signed approval pathway + revised SOW. <b>Owner: Brendan; Deadline: Mon EOD.</b></div></div>
+      <div class="ops-item"><div class="h">Tue · Mass requalification</div><div class="b">Steve, Brendan, Yazad each give a written "keep or kill" decision on Capital One, Randstad, Kelly, Soprasteria. Auto-update HubSpot stages or move to Closed Lost. <b>Owner: Hridesh facilitates; Deadline: Tue EOD.</b></div></div>
+      <div class="ops-item"><div class="h">Wed · T0 tagging cleanse</div><div class="b">Strip T0 from Givaudan ($3.5K) and Healthtrust ($17.5K). Document T0 criteria: ICP, ≥$50K, named champion, validated pain. Re-baseline forecast. <b>Owner: Hridesh; Deadline: Wed.</b></div></div>
+      <div class="ops-item"><div class="h">Thu · Benchmark multi-thread sprint</div><div class="b">Steve to add 3 new buyer-side stakeholders (CHRO, IT lead, Recruiting Ops). Deb to cover as exec sponsor. Activity logged in HubSpot. <b>Owner: Steve + Deb; Deadline: Fri.</b></div></div>
+      <div class="ops-item"><div class="h">Thu · Stage probability cleanup</div><div class="b">Medline regress to SQA. Audit all 12 T0 deal stage probabilities against actual customer evidence. <b>Owner: Hridesh + RevOps; Deadline: Thu EOD.</b></div></div>
+      <div class="ops-item"><div class="h">Fri · Coaching debrief</div><div class="b">15-min weekly review with each owner: their high-risk deals + corrective actions. Tracked in dashboard. <b>Owner: KJ &amp; Yaz; Deadline: every Fri 30-min.</b></div></div>
+      <div class="ops-item"><div class="h">Continuous · Ghost-deal alerts</div><div class="b">Activate HubSpot workflow: T0 deal &gt;14d no contact = Slack alert to rep + manager. &gt;21d = CEO alert. <b>Owner: RevOps; Deadline: live by Wed.</b></div></div>
+      <div class="ops-item"><div class="h">Continuous · T0 call attendance rule</div><div class="b">Reinforce that every T0 customer call must have Naren and Deb (or designated alternate). Flag in #t0-deals when violated. Teleperformance violation must be reviewed. <b>Owner: KJ; Deadline: review meeting Wed.</b></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Light pseudo-store backed by in-memory state (no localStorage in artifacts)
+const state = {
+  comments: {} // dealId -> [{author, text, ts}]
+};
+
+const T0_DEALS = [
+  {
+    id:"59225147248", name:"Teleperformance – Prog;Socials;Apply;UA",
+    owner:"Jesse Ofner", stage:"SQA", amount:87500, prob:10,
+    closeDate:"2026-06-17", lastContact:"2026-04-17", competitor:"—",
+    risk:"med", riskLabel:"Medium",
+    audit:{ai:"amber",disc:"amber",sm:"red",sf:"amber",sp:"amber",cs:"gray",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"T0 process violated — no Naren / Deb on the customer call", e:"KSJ called this out in #sales-mktg-ksj: 'mother of TO opportunity… we had a rule that any T0 will have you and Naren'", i:"Account strategy not validated by senior reviewers; risk of generic discovery", a:"Re-run the next call with Naren + Deb; share account strategy notes pre-call"},
+      {sev:"m", w:"Apr 30 customer meeting was rescheduled; no recovery plan", e:"HubSpot next_step says 'Meeting rescheduled. Trying to get answers to high-level questions'", i:"Lost momentum from rescheduled meeting; competitor TomoRHow agency relationship adds complexity", a:"Confirm new date in writing; circulate prep deck 48h before"}
+    ],
+    fwd:[
+      {pl:"Meeting slips again or is generic without senior review", p:"Medium", li:"No prep doc shared 48h before; no Naren on invite", m:"Mandatory T0 prep ritual + senior attendance", o:"Jesse / KJ", d:"Apr 29"},
+      {pl:"TomoRHow agency conflict not resolved before customer sees it", p:"Medium", li:"Yazad flagged in Slack; no documented stance", m:"Yaz + Cindy give Jesse a positioning brief", o:"Yazad", d:"Apr 30"}
+    ]
+  },
+  {
+    id:"58685790592", name:"Benchmark Senior Living – Prog;CMS;UA;Interview;Chat;Socials;Apply",
+    owner:"Steve Pisarra", stage:"SQA", amount:88100, prob:10,
+    closeDate:"2026-06-30", lastContact:"2026-04-20", competitor:"Appcast",
+    risk:"high", riskLabel:"High",
+    audit:{ai:"green",disc:"green",sm:"red",sf:"amber",sp:"green",cs:"amber",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"Single-threaded — only Kevin Loughran (2 months in role) carrying it", e:"Hridesh DM to KSJ: 'No multi-threading… buyer complexity: Kevin (2 months in) coordinating marketing, IT, recruiters, boss, ops'", i:"Champion fragility + delay risk + misalignment risk", a:"Steve to map and engage 3 additional stakeholders (CHRO, IT, Recruiting Ops) by Fri"},
+      {sev:"m", w:"May workshop is the only forward-looking commitment — risk of slip", e:"HubSpot description: 'A zero-commitment, two-hour workshop is scheduled for May'", i:"If May workshop slips, deal loses 4–6 weeks", a:"Steve to lock workshop date and pre-brief attendees by Wed"}
+    ],
+    fwd:[
+      {pl:"May workshop slips or has only Kevin attending", p:"High", li:"No additional contact RSVPs by May 1", m:"Pre-workshop intro calls with each named stakeholder", o:"Steve Pisarra", d:"May 1"},
+      {pl:"Appcast counter-pitches with Indeed bundle pricing", p:"Medium", li:"Kevin asks pricing question before workshop", m:"Have ROI/CPA case study (Touchmark) ready in advance", o:"Steve + Ashlie", d:"Apr 30"}
+    ]
+  },
+  {
+    id:"58474793827", name:"Healthtrust Workforce Solutions – Socials",
+    owner:"Brendan Macomber", stage:"Solution Confirmed", amount:17500, prob:30,
+    closeDate:"2026-05-15", lastContact:"2026-04-17", competitor:"Appcast",
+    risk:"high", riskLabel:"High",
+    audit:{ai:"amber",disc:"amber",sm:"red",sf:"red",sp:"amber",cs:"red",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"Champion is lukewarm — 'wasn't overly impressed with what she saw with Joveo'", e:"Brendan in #healthtrust-winback-strategy", i:"Buyer is unconvinced after losing previous champions; deal will not progress on current narrative", a:"Re-pitch with new differentiated story (AI Interviewer + UA win) or close-lost"},
+      {sev:"h", w:"T0 tagging is wrong — $17.5K deal labeled T0", e:"HubSpot account_tier=T0, amount=$17.5K", i:"Distorts T0 forecasting and stakeholder attention allocation", a:"Re-tier to T2 or T3 this week"},
+      {sev:"m", w:"Competitor lock-in not addressed — 'her hands tied with Appcast'", e:"Brendan in Slack", i:"Pricing pressure + can't break feed-only arrangement", a:"Build a bypass: pitch a non-Appcast-overlapping product (e.g. AI Interviewer)"}
+    ],
+    fwd:[
+      {pl:"Deal closes lost silently, no learning captured", p:"High", li:"No customer reply by May 1", m:"Force a kill-or-keep decision call by Tuesday", o:"Brendan + Yazad", d:"Apr 28"}
+    ]
+  },
+  {
+    id:"57830082987", name:"Maximus – Prog RFP",
+    owner:"Brendan Macomber", stage:"Pricing & Proposal", amount:70000, prob:60,
+    closeDate:"2026-04-30", lastContact:"2026-04-23", competitor:"Appcast",
+    risk:"high", riskLabel:"Critical",
+    audit:{ai:"green",disc:"green",sm:"amber",sf:"green",sp:"green",cs:"amber",pl:"red"},
+    gaps:[
+      {sev:"h", w:"Closes this week with phased rollout still being defined", e:"Brendan in #maximus-gov-bpo-rfi: 'we need to present a phased approach as the Avature integration won't be something they can address at launch'", i:"Risk of slip past Apr 30 close; legal/procurement path undocumented", a:"Monday war-room: Brendan + Naren + Legal lock the phased SOW + procurement contact"},
+      {sev:"h", w:"Procurement/legal pathway not documented", e:"No procurement contact in HubSpot record; no MSA/DPA status", i:"Late surprises will push close to May/June", a:"Identify Maximus procurement contact today; book intro call this week"},
+      {sev:"m", w:"Hridesh flagged risk to KJ — written escalation, no documented mitigation plan", e:"Hridesh DM to KSJ: 'Both are needle movers — if we don't win — it will be a shame'", i:"Senior leadership concerned but no countermeasure plan", a:"Brendan to publish written risk + mitigation plan in #maximus channel by Mon EOD"}
+    ],
+    fwd:[
+      {pl:"Apr 30 close slips past EOM", p:"High", li:"No phased SOW signed by Wed", m:"War-room Monday + senior unblockers", o:"Brendan", d:"Apr 30"},
+      {pl:"Avature integration becomes a procurement-blocking question", p:"Medium", li:"Procurement asks for tech evaluation", m:"Pre-empt with phased approach doc + reference customer", o:"Naren", d:"Apr 28"}
+    ]
+  },
+  {
+    id:"56549269937", name:"Givaudan – Prog RFP",
+    owner:"Jesse Ofner", stage:"SQA", amount:3500, prob:10,
+    closeDate:"2026-10-15", lastContact:"2026-04-24", competitor:"Phenom",
+    risk:"med", riskLabel:"Medium",
+    audit:{ai:"amber",disc:"amber",sm:"amber",sf:"amber",sp:"green",cs:"amber",pl:"red"},
+    gaps:[
+      {sev:"h", w:"T0 tagging discipline broken — $3.5K deal labeled T0", e:"HubSpot account_tier=T0, amount=$3.5K", i:"T0 ranks lose meaning when applied to small deals; resourcing distorted", a:"Re-tier or re-classify Givaudan; document tier criteria"},
+      {sev:"m", w:"Phenom entered competition late and unmanaged", e:"Jesse in #sap-partnership: 'I didn't think it was in the mix, but now it is for sure'", i:"Increased risk of losing on capability framing", a:"Build a Phenom battlecard for the response; lean on SAP partnership"},
+      {sev:"m", w:"Only Taha + Jesse internally on RFP — no formal POV/strategy doc", e:"HubSpot next_step: '4/15 - We have the RFP just received. Taha and Jesse to review'", i:"12 days post-receipt with no RFP response plan documented", a:"Build response plan w/ KPI alignment by Wed"}
+    ],
+    fwd:[
+      {pl:"RFP submission misses or is generic", p:"Medium", li:"No response outline by Wed", m:"Jesse + Taha to circulate response outline; loop in Mike on SAP angle", o:"Jesse Ofner", d:"Apr 30"}
+    ]
+  },
+  {
+    id:"55031047569", name:"Randstad – Prog RFP",
+    owner:"Brendan Macomber", stage:"SQA", amount:105000, prob:10,
+    closeDate:"2026-08-21", lastContact:"2026-03-13", competitor:"—",
+    risk:"high", riskLabel:"High",
+    audit:{ai:"amber",disc:"red",sm:"red",sf:"red",sp:"red",cs:"red",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"45 days no client contact — pipeline rot", e:"HubSpot notes_last_contacted = Mar 13", i:"Deal is decaying; champion likely lost; will close-lost by default", a:"Force a re-qualify or close-lost decision by Tuesday"},
+      {sev:"h", w:"Stage SQA at 10% probability for 3 months — no movement", e:"HubSpot dealstage = SQA since Jan 29", i:"Stage tagging is fictional; corrupts forecast", a:"Either move to Solution Confirmed with evidence or regress / close"},
+      {sev:"m", w:"No identified champion or economic buyer", e:"No contacts named in HubSpot", i:"Even if we re-engage, no path to decision", a:"Stakeholder map within first re-engagement"}
+    ],
+    fwd:[
+      {pl:"Deal silently rots through Q2", p:"High", li:"No re-engagement attempt logged this week", m:"Mandatory re-qualify call Tue", o:"Brendan + Yazad", d:"Apr 28"}
+    ]
+  },
+  {
+    id:"47720234586", name:"Medline Industries – Prog;CMS",
+    owner:"Deborah Andrychuk", stage:"Solution Confirmed", amount:180000, prob:30,
+    closeDate:"2027-02-28", lastContact:"2026-04-15", competitor:"Agencies, Appcast, Beamery, Paradox",
+    risk:"med", riskLabel:"Medium",
+    audit:{ai:"green",disc:"amber",sm:"amber",sf:"amber",sp:"amber",cs:"amber",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"Stage misaligned with reality — 'next step closer to end of year with an RFP'", e:"Deb in Slack #medline-oppty", i:"Deal is in Solution Confirmed @ 30% but the customer is dormant for 8+ months; forecast inflated", a:"Regress to SQA or move to a 'Targeted / EOY RFP' watch list"},
+      {sev:"m", w:"4-way competition with no documented win plan", e:"HubSpot competition field: Agencies, Appcast, Beamery, Paradox", i:"No differentiation strategy per competitor", a:"Deb to draft 1-page win plan vs. each competitor by EOW"},
+      {sev:"l", w:"Single-thread — two key contacts, no response from either", e:"Deb in Slack: 'reached out to the two folks we are closest with and got no response'", i:"Champion engagement gap", a:"Lunch / dinner in Chicago this month per Deb's plan"}
+    ],
+    fwd:[
+      {pl:"Stage probability stays inflated through Q2 forecast call", p:"High", li:"No regression in HubSpot by Thu", m:"Force stage update; mark as long-cycle watch", o:"Hridesh / RevOps", d:"Apr 30"}
+    ]
+  },
+  {
+    id:"47416094735", name:"NHS Management – CRM",
+    owner:"Steve Pisarra", stage:"Solution Confirmed", amount:100000, prob:30,
+    closeDate:"2026-07-01", lastContact:"2026-04-20", competitor:"Chattr",
+    risk:"med", riskLabel:"Medium",
+    audit:{ai:"green",disc:"green",sm:"amber",sf:"green",sp:"green",cs:"amber",pl:"amber"},
+    gaps:[
+      {sev:"l", w:"Discovery is excellent; ROI quantified ($685K duplicate apply fees)", e:"HubSpot description has detailed pain analysis", i:"Positive — but stale 'next step: October 30 call' suggests next action wasn't updated", a:"Update next-step in HubSpot to current commitment"},
+      {sev:"m", w:"Procurement / contract path not yet defined for July 1 close", e:"No procurement contact identified", i:"Close date 2 months out; need contract path now", a:"Steve to confirm legal contact + MSA/DPA status by Fri"}
+    ],
+    fwd:[
+      {pl:"Procurement surprise pushes close past July 1", p:"Medium", li:"No procurement contact identified by Fri", m:"Steve to ask champion for procurement intro this week", o:"Steve Pisarra", d:"May 2"}
+    ]
+  },
+  {
+    id:"38284462734", name:"Kelly Services – Prog RFP",
+    owner:"Brendan Macomber", stage:"SQA", amount:105000, prob:10,
+    closeDate:"2026-11-27", lastContact:"2026-02-20", competitor:"—",
+    risk:"high", riskLabel:"High",
+    audit:{ai:"amber",disc:"red",sm:"red",sf:"red",sp:"red",cs:"red",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"66 days no contact — extreme ghosting", e:"HubSpot notes_last_contacted = Feb 20", i:"Relationship effectively dormant", a:"Re-qualify call with new outreach to alt contacts"},
+      {sev:"h", w:"Key contact Ed Pederson announced he is leaving Kelly", e:"Jennifer Smith in #kelly-services-rfp-oppty: 'Update on key contact change at Kelly: Ed Pederson announced today he is leaving Kelly'", i:"Champion lost mid-deal", a:"Identify replacement contact + LinkedIn outreach this week"},
+      {sev:"h", w:"Only 2 valid meetings in entire deal history", e:"Yazad's Kelly Services Account Report (#kelly-services-rfp-oppty)", i:"Foundation never built; SQA stage is fictional", a:"Either restart with AI Interviewer angle (Brendan's current plan) or close-lost"}
+    ],
+    fwd:[
+      {pl:"Deal continues to drift; no replacement champion engaged", p:"High", li:"No new contact reached this week", m:"Brendan + Jennifer execute the in-person + lunch outreach plan", o:"Brendan + Jennifer", d:"May 1"}
+    ]
+  },
+  {
+    id:"38281928631", name:"Capital One – Prog;CMS;Chat RFP",
+    owner:"Steve Pisarra", stage:"SQA", amount:29000, prob:10,
+    closeDate:"2026-07-30", lastContact:"2026-04-21", competitor:"DirectEmployers",
+    risk:"high", riskLabel:"Disqualify",
+    audit:{ai:"amber",disc:"amber",sm:"red",sf:"red",sp:"amber",cs:"red",pl:"red"},
+    gaps:[
+      {sev:"h", w:"Rep has explicitly written 'we don't expect to win this RFP'", e:"Steve in #capital-one-rfi: 'we don't expect to win this RFP. We suspect that they will just go directly to DirectEmployers'", i:"Pipeline integrity issue; deal forecasted but is a known loss", a:"Either disqualify and move to Closed Lost, or change strategy and document why we now expect to win"},
+      {sev:"h", w:"In SQA stage since May 2025 (~12 months) with $29K amount", e:"HubSpot createdate = May 30 2025, dealstage = SQA", i:"Forecast and team energy distorted; T0 tagging questionable at $29K", a:"Re-tier or re-classify; archive lessons-learned"},
+      {sev:"m", w:"Single-thread to sourcing manager; recruiting leadership decision-maker not engaged", e:"HubSpot description notes 'Final decisions are made by the line of business, specifically Capital One's recruiting leadership… sourcing… provide due diligence'", i:"We're talking to procurement, not the buyer", a:"If kept, must engage recruiting leadership; if not, close-lost"}
+    ],
+    fwd:[
+      {pl:"Continues to corrupt forecast through Q2", p:"High", li:"No status change by Tue", m:"Mandatory keep-or-kill decision Tuesday", o:"Steve + Hridesh", d:"Apr 28"}
+    ]
+  },
+  {
+    id:"28699497351", name:"Soprasteria SSCL – Prog;CRM;CMS",
+    owner:"Yazad Dalal", stage:"Solution Confirmed", amount:55000, prob:30,
+    closeDate:"2026-05-29", lastContact:"2026-02-24", competitor:"independent agencies",
+    risk:"high", riskLabel:"High",
+    audit:{ai:"amber",disc:"amber",sm:"red",sf:"amber",sp:"red",cs:"amber",pl:"amber"},
+    gaps:[
+      {sev:"h", w:"62 days no client contact and close date is May 29 (32 days away)", e:"HubSpot notes_last_contacted = Feb 24, closedate = May 29", i:"Either deal is dead in customer's mind or stage is fictional", a:"Force a status call this week; revise stage or close-lost"},
+      {sev:"m", w:"No multi-thread visible; segment 'Other' (data quality)", e:"HubSpot segment = 'Other'", i:"Categorization gap + low coverage", a:"Yazad to engage 2nd stakeholder + correct segment tag"}
+    ],
+    fwd:[
+      {pl:"Deal close-lost with no debrief or learning", p:"High", li:"No reply to outreach this week", m:"Direct call from Yazad; if no response in 5 business days → close-lost", o:"Yazad Dalal", d:"May 2"}
+    ]
+  },
+  {
+    id:"19934169903", name:"UPS – Prog",
+    owner:"Scott Garrett", stage:"SQA", amount:175000, prob:10,
+    closeDate:"2026-07-01", lastContact:"2026-04-17", competitor:"—",
+    risk:"med", riskLabel:"Medium",
+    audit:{ai:"amber",disc:"amber",sm:"red",sf:"amber",sp:"amber",cs:"gray",pl:"gray"},
+    gaps:[
+      {sev:"h", w:"Largest T0 deal at $175K but stuck in SQA at 10% probability", e:"HubSpot dealstage SQA, prob 10%", i:"Either misforecast or deeply stalled", a:"Stage probability review + verify with Scott this week"},
+      {sev:"m", w:"No multi-thread visible; no recent Slack activity referencing UPS", e:"Slack search returned no UPS-specific recent messages", i:"Single-threaded or low engagement", a:"Scott to share stakeholder map and last 30-day activity log"},
+      {sev:"m", w:"Owner pattern — multiple recent closed-lost deals (Deloitte, Syneos)", e:"#closed-lost-disqualified-alerts shows Scott deals lost recently", i:"Coaching opportunity on owner-level conversion", a:"Yaz to do a 1:1 deal review with Scott this Fri"}
+    ],
+    fwd:[
+      {pl:"$175K continues to sit in SQA without progress", p:"Medium", li:"No new meeting scheduled with UPS this week", m:"Scott to share path-to-Solution-Confirmed plan", o:"Scott + Yazad", d:"May 1"}
+    ]
+  }
+];
+
+// 57 non-T0 deals (excluded 2 owned by Collin Osburn)
+const NONT0_DEALS = [
+  {id:"59680736938",name:"Hims – Prog;Socials;UA",owner:"Jesse Ofner",tier:"Untiered",stage:"SQA",amount:7000,closeDate:"2026-05-29",lastContact:"2026-04-24",score:""},
+  {id:"59477309701",name:"The Container Store – Interview",owner:"Scott Garrett",tier:"Untiered",stage:"SQA",amount:3500,closeDate:"2026-06-30",lastContact:"2026-04-22",score:18},
+  {id:"59277713814",name:"Impellam Group – Prog",owner:"Brendan Macomber",tier:"T1",stage:"SQA",amount:35000,closeDate:"2026-06-30",lastContact:"2026-04-23",score:40},
+  {id:"58798332335",name:"Sharp Healthcare – Prog;Socials;CMS;UA;Chat",owner:"Deborah Andrychuk",tier:"T2",stage:"SQA",amount:20500,closeDate:"2026-06-30",lastContact:"2026-04-17",score:27},
+  {id:"58798190922",name:"Hackensack Meridian Health – Prog;UA",owner:"Deborah Andrychuk",tier:"T2",stage:"SQA",amount:10500,closeDate:"2026-06-30",lastContact:"2026-04-13",score:22},
+  {id:"58754522441",name:"Memorial Health – Prog",owner:"Deborah Andrychuk",tier:"T2",stage:"Solution Confirmed",amount:8750,closeDate:"2026-05-31",lastContact:"2026-04-20",score:18},
+  {id:"58634231670",name:"Eteam – Prog",owner:"Brendan Macomber",tier:"T2",stage:"SQA",amount:17500,closeDate:"2026-07-31",lastContact:"2026-03-31",score:12},
+  {id:"58479511703",name:"Prudential Financial – CMS;CRM;Chat",owner:"Yazad Dalal",tier:"T1",stage:"SQA",amount:9000,closeDate:"2026-09-30",lastContact:"2026-03-06",score:30},
+  {id:"58474759425",name:"Atento – Prog;Socials;CMS;Chat",owner:"Yazad Dalal",tier:"T3",stage:"SQA",amount:13500,closeDate:"2026-06-29",lastContact:"2026-03-25",score:20},
+  {id:"58519367298",name:"Express Employment Professionals – Prog",owner:"Brendan Macomber",tier:"T1",stage:"Solution Confirmed",amount:35000,closeDate:"2026-04-30",lastContact:"2026-04-24",score:57},
+  {id:"58332125472",name:"KLA Corporation – Prog",owner:"Deborah Andrychuk",tier:"T3",stage:"SQA",amount:7000,closeDate:"2026-06-30",lastContact:"2026-04-17",score:13},
+  {id:"58368951694",name:"Meijer, Inc. – Prog",owner:"Steve Pisarra",tier:"T1",stage:"Pricing & Proposal",amount:26250,closeDate:"2026-06-01",lastContact:"2026-04-22",score:63},
+  {id:"58289056440",name:"Guidewire Software – Socials",owner:"Scott Garrett",tier:"T3",stage:"Pricing & Proposal",amount:4550,closeDate:"2026-04-30",lastContact:"2026-04-22",score:65},
+  {id:"58024963231",name:"GAF – Interview;Chat;Prog RFP",owner:"Jesse Ofner",tier:"T2",stage:"SQA",amount:30250,closeDate:"2026-07-15",lastContact:"2026-04-22",score:41},
+  {id:"57856119390",name:"Hueman – Prog;Socials;Apply RFP",owner:"Brendan Macomber",tier:"T1",stage:"Solution Confirmed",amount:35000,closeDate:"2026-07-24",lastContact:"2026-04-10",score:30},
+  {id:"57865549998",name:"Orion Talent – Prog;Socials;Apply;UA",owner:"Brendan Macomber",tier:"T1",stage:"SQA",amount:10500,closeDate:"2026-07-31",lastContact:"2026-03-13",score:19},
+  {id:"57865209765",name:"Northeast Georgia Health System – Prog;Socials;UA",owner:"Deborah Andrychuk",tier:"T1",stage:"SQA",amount:10500,closeDate:"2026-06-30",lastContact:"2026-03-10",score:26},
+  {id:"57746262077",name:"AdventHealth – Prog",owner:"Scott Garrett",tier:"T1",stage:"SQA",amount:35000,closeDate:"2026-08-27",lastContact:"2026-04-10",score:26},
+  {id:"57350946053",name:"Newrez – CMS;Chat",owner:"Steve Pisarra",tier:"AI Product Deal",stage:"Solution Confirmed",amount:5985,closeDate:"2026-05-20",lastContact:"2026-04-20",score:39},
+  {id:"57100467273",name:"Cleveland Clinic – Prog",owner:"Scott Garrett",tier:"T1",stage:"SQA",amount:17500,closeDate:"2026-05-28",lastContact:"2026-04-24",score:37},
+  {id:"57200734116",name:"Emergence Software – Integrated talent sourcing platform",owner:"Yazad Dalal",tier:"AI Product Deal",stage:"SQA",amount:4500,closeDate:"2026-05-29",lastContact:"2026-02-24",score:22},
+  {id:"57093691697",name:"ProAmpac – Socials;UA",owner:"Deborah Andrychuk",tier:"T3",stage:"SQA",amount:7000,closeDate:"2026-05-29",lastContact:"2026-04-21",score:54},
+  {id:"56981898316",name:"Poplin – CG;Prog",owner:"Satyam Singh",tier:"T3",stage:"SQA",amount:1750,closeDate:"2026-03-31",lastContact:"2026-03-27",score:30},
+  {id:"56935764403",name:"Eli Lilly – Chat",owner:"Deborah Andrychuk",tier:"AI Product Deal",stage:"SQA",amount:5000,closeDate:"2026-06-17",lastContact:"2026-02-25",score:17},
+  {id:"56889063466",name:"WellBiz – Prog;UA;CMS",owner:"Jesse Ofner",tier:"T1",stage:"SQA",amount:10000,closeDate:"2026-07-15",lastContact:"2026-04-21",score:16},
+  {id:"56889125173",name:"Chobani – Prog;Socials;Apply",owner:"Jesse Ofner",tier:"T3",stage:"SQA",amount:12625,closeDate:"2026-11-18",lastContact:"2026-04-21",score:18},
+  {id:"56896438020",name:"RK – Prog;Chat;UA",owner:"Jesse Ofner",tier:"T2",stage:"SQA",amount:11500,closeDate:"2026-06-17",lastContact:"2026-03-31",score:20},
+  {id:"56889247363",name:"TTEC – CMS;UA;Chat",owner:"Jesse Ofner",tier:"AI Product Deal",stage:"Solution Confirmed",amount:10000,closeDate:"2026-09-16",lastContact:"2026-04-14",score:40},
+  {id:"56442833985",name:"Novo Nordisk US – Prog",owner:"Deborah Andrychuk",tier:"T2",stage:"Solution Confirmed",amount:10500,closeDate:"2026-05-31",lastContact:"2026-04-21",score:32},
+  {id:"56162792213",name:"Ginger Promotions UK – Unified;Prog",owner:"Yazad Dalal",tier:"T2",stage:"SQA",amount:13500,closeDate:"2026-04-24",lastContact:"2026-02-11",score:26},
+  {id:"54956771867",name:"SNCB – Integrated talent sourcing platform;CMS;CRM",owner:"Yazad Dalal",tier:"AI Product Deal",stage:"SQA",amount:8500,closeDate:"2026-05-29",lastContact:"2026-01-27",score:12},
+  {id:"55034858328",name:"Ion – Interview",owner:"Prateek Mishra",tier:"AI Product Deal",stage:"SQA",amount:3000,closeDate:"2026-03-31",lastContact:"2026-01-09",score:27},
+  {id:"53358618285",name:"LaserAway – Prog",owner:"Mike Dingman",tier:"T3",stage:"SQA",amount:3500,closeDate:"2026-06-30",lastContact:"2026-02-18",score:9},
+  {id:"52883879825",name:"Towardjobs – Prog",owner:"Satyam Singh",tier:"T3",stage:"Pricing & Proposal",amount:3500,closeDate:"2026-01-31",lastContact:"2026-01-30",score:18},
+  {id:"52076894616",name:"WilsonHCG – Prog",owner:"Brendan Macomber",tier:"T1",stage:"SQA",amount:42000,closeDate:"2026-07-31",lastContact:"2026-01-20",score:9},
+  {id:"52083602345",name:"S3 / Sthree (US) – UA;Prog",owner:"Brendan Macomber",tier:"T2",stage:"SQA",amount:26250,closeDate:"2026-07-31",lastContact:"2026-03-16",score:8},
+  {id:"52069894149",name:"Reed Talent Solutions – Prog",owner:"Brendan Macomber",tier:"T2",stage:"SQA",amount:38500,closeDate:"2026-07-31",lastContact:"2026-03-13",score:16},
+  {id:"52036291371",name:"Brunel – Prog",owner:"Brendan Macomber",tier:"T1",stage:"SQA",amount:17500,closeDate:"2026-07-31",lastContact:"2026-03-13",score:9},
+  {id:"51633470023",name:"A.S. Watson Group – CMS",owner:"Scott Garrett",tier:"T2",stage:"SQA",amount:10000,closeDate:"2026-06-30",lastContact:"2026-03-03",score:13},
+  {id:"49649070688",name:"Talent Works International – Prog",owner:"Brendan Macomber",tier:"T2",stage:"SQA",amount:17500,closeDate:"2026-07-31",lastContact:"2026-03-19",score:9},
+  {id:"49776557684",name:"Ondiem – Prog",owner:"Brendan Macomber",tier:"T2",stage:"SQA",amount:17500,closeDate:"2026-06-30",lastContact:"2025-12-17",score:8},
+  {id:"48327153482",name:"Joblift – Prog",owner:"Satyam Singh",tier:"T3",stage:"Pricing & Proposal",amount:1750,closeDate:"2025-11-10",lastContact:"2026-03-17",score:19},
+  {id:"48271880865",name:"TalentXi – Prog",owner:"Satyam Singh",tier:"T3",stage:"Solution Confirmed",amount:1750,closeDate:"2025-12-15",lastContact:"2025-12-22",score:9},
+  {id:"48265456719",name:"Panda Restaurant Group – Prog",owner:"Scott Garrett",tier:"T1",stage:"SQA",amount:21000,closeDate:"2026-07-31",lastContact:"2026-04-13",score:""},
+  {id:"46902656788",name:"Hewlett Packard Enterprise – Prog",owner:"Scott Garrett",tier:"T1",stage:"Solution Confirmed",amount:52500,closeDate:"2026-05-29",lastContact:"2026-04-23",score:26},
+  {id:"42920510575",name:"Innova Solutions – Prog",owner:"Brendan Macomber",tier:"T1",stage:"Solution Confirmed",amount:26250,closeDate:"2026-05-22",lastContact:"2026-04-03",score:29},
+  {id:"42712899092",name:"Vertex Inc – CMS;Prog",owner:"Deborah Andrychuk",tier:"T2",stage:"Solution Confirmed",amount:8200,closeDate:"2026-06-30",lastContact:"2026-04-23",score:21},
+  {id:"42070929041",name:"Good Neighborhood LLC – Socials",owner:"Satyam Singh",tier:"T3",stage:"Solution Confirmed",amount:0,closeDate:"2025-09-30",lastContact:"2025-11-07",score:9},
+  {id:"40713516823",name:"Hallcon – Prog",owner:"Scott Garrett",tier:"T2",stage:"Pricing & Proposal",amount:10500,closeDate:"2026-04-24",lastContact:"2026-04-24",score:88},
+  {id:"39434956116",name:"Talk To The Job Board Experts – CG",owner:"Satyam Singh",tier:"T3",stage:"Solution Confirmed",amount:0,closeDate:"2025-10-09",lastContact:"2025-06-30",score:5},
+  {id:"39441186065",name:"MindMatch – CG",owner:"Satyam Singh",tier:"T3",stage:"Pricing & Proposal",amount:0,closeDate:"2025-11-30",lastContact:"2026-04-22",score:31},
+  {id:"38393698062",name:"Global Payments – Prog",owner:"Scott Garrett",tier:"T3",stage:"SQA",amount:7000,closeDate:"2026-07-31",lastContact:"2026-04-06",score:17},
+  {id:"37444128571",name:"Aristocrat – Prog",owner:"Scott Garrett",tier:"T1",stage:"Solution Confirmed",amount:35000,closeDate:"2026-05-29",lastContact:"2026-04-10",score:20},
+  {id:"35673171609",name:"Edustaff – Prog",owner:"Brendan Macomber",tier:"T3",stage:"Solution Confirmed",amount:17500,closeDate:"2026-05-22",lastContact:"2026-03-31",score:17},
+  {id:"35576507058",name:"Electrolux – Prog",owner:"Scott Garrett",tier:"T1",stage:"Solution Confirmed",amount:10500,closeDate:"2026-07-31",lastContact:"2026-04-23",score:""},
+  {id:"35129588575",name:"Lean Tech – Prog",owner:"Satyam Singh",tier:"T3",stage:"Solution Confirmed",amount:3500,closeDate:"2025-05-30",lastContact:"2025-06-26",score:12},
+  {id:"23005297439",name:"Fairview Health Services – Prog",owner:"Deborah Andrychuk",tier:"T2",stage:"Pricing & Proposal",amount:14000,closeDate:"2026-04-17",lastContact:"2026-04-20",score:73}
+];
+
+const auditLabels = {ai:"Acct Intel",disc:"Discovery",sm:"Stakeholders",sf:"Solution Fit",sp:"Speed",cs:"Commercial",pl:"Procure/Legal"};
+const auditFull = {green:"Strong",amber:"Gap",red:"Failure",gray:"N/A"};
+
+function fmt$(n){return "$"+(n>=1000?(n/1000).toFixed(n>=10000?0:1)+"K":n)}
+function daysAgo(d){const ms=Date.now()-new Date(d).getTime();return Math.floor(ms/86400000)}
+function daysUntil(d){return Math.floor((new Date(d).getTime()-Date.now())/86400000)}
+function nextWeek(){return new Date(Date.now()+7*86400000).toISOString().slice(0,10)}
+
+// === Auto-derive audit signals for non-T0 deals from HubSpot data ===
+function deriveAudit(d){
+  const dgo=daysAgo(d.lastContact);
+  const score=Number(d.score)||0;
+  const closeDgo=daysUntil(d.closeDate);
+  let a={ai:"gray",disc:"gray",sm:"gray",sf:"gray",sp:"gray",cs:"gray",pl:"gray"};
+  // Speed (last contact)
+  if(dgo>60) a.sp="red";
+  else if(dgo>30) a.sp="amber";
+  else if(dgo<=14) a.sp="green";
+  else a.sp="amber";
+  // Discovery + Solution Fit + Stakeholders inferred from deal score
+  if(score>=50){a.disc="green";a.sf="green";a.sm="amber";}
+  else if(score>=25){a.disc="amber";a.sf="amber";a.sm="amber";}
+  else if(score>0){a.disc="red";a.sf="red";a.sm="red";}
+  // Commercial structuring — close-date sanity, amount sanity
+  if(closeDgo<0) a.cs="red";
+  else if(closeDgo<60 && score<25) a.cs="amber";
+  else if(score>=50) a.cs="green";
+  if(d.amount===0) a.cs="red";
+  // Account intel — tier/amount mismatch
+  if(d.tier==="T1" && d.amount<10000) a.ai="red";
+  else if(d.tier==="T1" && d.amount<25000) a.ai="amber";
+  else if(score>=50) a.ai="green";
+  else a.ai="amber";
+  // Procurement / Legal — most relevant when in Pricing stage
+  if(d.stage==="Pricing & Proposal"){
+    if(closeDgo<0) a.pl="red";
+    else if(closeDgo<30) a.pl="amber";
+    else a.pl="amber";
+  } else if(d.stage==="Solution Confirmed" && closeDgo<60) a.pl="amber";
+  return a;
+}
+
+function deriveGaps(d){
+  const dgo=daysAgo(d.lastContact);
+  const score=Number(d.score)||0;
+  const closeDgo=daysUntil(d.closeDate);
+  const gaps=[];
+  if(dgo>60) gaps.push({sev:"h", w:`${dgo} days no client contact — pipeline rot`, e:`HubSpot notes_last_contacted = ${d.lastContact}`, i:"Relationship effectively dormant; deal will close-lost by default", a:"Force re-qualify call this week or move to Closed Lost"});
+  else if(dgo>30) gaps.push({sev:"m", w:`${dgo} days no client contact`, e:`HubSpot notes_last_contacted = ${d.lastContact}`, i:"Slipping into pipeline rot; momentum lost", a:"Re-engagement attempt this week + log next step"});
+  if(closeDgo<0) gaps.push({sev:"h", w:`Close date is ${Math.abs(closeDgo)} days in the past`, e:`HubSpot closedate = ${d.closeDate}`, i:"Forecast and stage integrity broken", a:"Update close date with evidence or move to Closed Lost"});
+  else if(closeDgo<14 && d.stage!=="Pricing & Proposal") gaps.push({sev:"h", w:`Closes in ${closeDgo} days but still in ${d.stage}`, e:`HubSpot closedate ${d.closeDate}, dealstage ${d.stage}`, i:"Stage doesn't match close timing — push or pull", a:"Either accelerate to Pricing & Proposal or push close date"});
+  if(score>0 && score<15) gaps.push({sev:"h", w:`Deal score is critically low (${d.score})`, e:"HubSpot deal score property", i:"Predictive signal of probable loss; team energy is misallocated", a:"Owner-led senior review: rebuild engagement or close-lost"});
+  else if(score>=15 && score<25) gaps.push({sev:"m", w:`Deal score weak (${d.score})`, e:"HubSpot deal score property", i:"Below healthy progression threshold", a:"Add discovery + multi-thread effort this week"});
+  if(d.amount===0) gaps.push({sev:"m", w:"Deal amount is $0", e:"HubSpot amount = 0", i:"Forecast and tier integrity broken; amount missing", a:"Either scope-and-price or close-lost"});
+  if(d.tier==="T1" && d.amount<10000) gaps.push({sev:"m", w:`T1 tag on a ${fmt$(d.amount)} deal — tier mismatch`, e:`HubSpot tier=T1, amount=${fmt$(d.amount)}`, i:"Tier hygiene is drifting; over-resourced for size", a:"Re-tier to T2 / T3 or upsize the scope"});
+  else if(d.tier==="T1" && d.amount<25000) gaps.push({sev:"l", w:`T1 tag on small (${fmt$(d.amount)}) deal — verify tier`, e:`HubSpot tier=T1, amount=${fmt$(d.amount)}`, i:"Tier may not match account potential", a:"Confirm T1 logic with manager"});
+  if(!gaps.length) gaps.push({sev:"l", w:"No major execution gaps surfaced from structured signals", e:"Auto-audit clean (score, freshness, stage, close date all on track)", i:"Deal appears on-track; manual review still recommended for full audit", a:"Confirm next-step in HubSpot reflects current commitment"});
+  return gaps;
+}
+
+function deriveFwd(d){
+  const dgo=daysAgo(d.lastContact);
+  const score=Number(d.score)||0;
+  const closeDgo=daysUntil(d.closeDate);
+  const fwd=[];
+  if(dgo>30) fwd.push({pl:"Continued silence rolls deal to close-lost by default", p: dgo>60?"High":"Medium", li:"No reply to outreach this week", m:"Owner-led re-qualify call; if no response in 5 business days → close-lost", o:d.owner, d:nextWeek()});
+  if(closeDgo>=0 && closeDgo<30) fwd.push({pl:"Close date arrives without procurement / contract motion", p: score<25?"High":"Medium", li:"No procurement contact identified in HubSpot", m:"Confirm procurement / legal pathway this week", o:d.owner, d:d.closeDate});
+  else if(closeDgo<0) fwd.push({pl:"Past-due close date corrupts forecast another week", p:"High", li:"Stage hasn't moved", m:"Move to Closed Lost or re-set close date with evidence", o:d.owner, d:nextWeek()});
+  if(score>0 && score<20) fwd.push({pl:"Deal score stays out of healthy range; manager loses visibility", p:"Medium", li:"No new activity logged this week", m:"Owner publishes 1-line plan in deal notes", o:d.owner, d:nextWeek()});
+  if(d.tier==="T1" && d.amount<10000) fwd.push({pl:"T1 mis-tag distorts management attention this week", p:"Medium", li:"Tier still T1 in HubSpot", m:"Re-tier to T2/T3 in the same hygiene pass as T0 cleanse", o:"RevOps / "+d.owner, d:nextWeek()});
+  if(!fwd.length) fwd.push({pl:"Deal continues at current pace without new risk", p:"Low", li:"Activity cadence holds steady", m:"Maintain weekly contact + log next step in HubSpot", o:d.owner, d:nextWeek()});
+  return fwd;
+}
+
+function deriveRisk(d){
+  const dgo=daysAgo(d.lastContact);
+  const score=Number(d.score)||0;
+  const closeDgo=daysUntil(d.closeDate);
+  if(dgo>60 || closeDgo<0 || (score>0 && score<15) || d.amount===0) return {risk:"high", riskLabel:"High"};
+  if(dgo>30 || (score>0 && score<25) || (closeDgo<14 && d.stage!=="Pricing & Proposal") || (d.tier==="T1" && d.amount<10000)) return {risk:"med", riskLabel:"Medium"};
+  return {risk:"low", riskLabel:"Healthy"};
+}
+
+function buildDealCard(d, prefix){
+  const dgo = daysAgo(d.lastContact);
+  const idAttr = prefix? `${prefix}-${d.id}` : d.id;
+  return `
+    <div class="deal" data-owner="${d.owner}" data-tier="${d.tier||'T0'}" data-stage="${d.stage}" data-risk="${d.risk}">
+      <div class="deal-head risk-${d.risk}" onclick="toggleDeal('${idAttr}')">
+        <div><div class="deal-name">${d.name}</div><div class="deal-meta">Owner: ${d.owner} · ${d.tier?`Tier: ${d.tier} · `:''}Last contact: ${d.lastContact} (${dgo}d ago) · Close: ${d.closeDate}${d.prob?` · Probability: ${d.prob}%`:''}${d.score!==undefined?` · Score: ${d.score||'—'}`:''}</div></div>
+        <div class="deal-amount">${fmt$(d.amount)}</div>
+        <div class="deal-stage">${d.stage}</div>
+        <div class="deal-owner">${d.competitor||d.tier||'—'}</div>
+        <div><span class="risk-badge ${d.risk[0]}">${d.riskLabel}</span></div>
+      </div>
+      <div class="deal-body" id="db-${idAttr}">
+
+        <div class="section">
+          <h4>Audit Lens (7 dimensions)${prefix==='nt'?' — auto-derived from HubSpot':''}</h4>
+          <div class="audit-grid">
+            ${Object.keys(auditLabels).map(k=>`<div class="audit-cell ${d.audit[k]}" title="${auditLabels[k]}: ${auditFull[d.audit[k]]}"><span class="lbl">${auditLabels[k]}</span>${auditFull[d.audit[k]]}</div>`).join('')}
+          </div>
+          <div class="legend">
+            <span><span class="ld" style="background:#7ba788"></span>Strong</span>
+            <span><span class="ld" style="background:#cf9c6f"></span>Gap</span>
+            <span><span class="ld" style="background:#c87f7b"></span>Failure</span>
+            <span><span class="ld" style="background:#bbc4ce"></span>N/A</span>
+          </div>
+          ${prefix==='nt'?'<small class="muted" style="display:block;margin-top:6px">Signals derived from staleness (last contact), HubSpot deal score, stage vs. close-date alignment, and amount vs. tier sanity. Slack/Avoma triangulation is reserved for T0.</small>':''}
+        </div>
+
+        <div class="section">
+          <h4>Execution Gaps &amp; Issues (mistakes already made)</h4>
+          ${d.gaps.map(g=>`
+            <div class="gap"><span class="sev ${g.sev}">${g.sev==='h'?'High':g.sev==='m'?'Medium':'Low'}</span><b>${g.w}</b>
+              <div class="evidence">Evidence: ${g.e}</div>
+              <div>Impact: ${g.i}</div>
+              <div class="action">→ Corrective action: ${g.a}</div>
+            </div>`).join('')}
+        </div>
+
+        <div class="section">
+          <h4>Next 7-Day Forward Risks</h4>
+          ${d.fwd.map(f=>`<div class="fwd-risk"><div class="pl">${f.pl}</div><div class="det">Probability: <b>${f.p}</b> · Leading indicator: ${f.li} · Mitigation: ${f.m} · Owner: <b>${f.o}</b> · Deadline: <b>${f.d}</b></div></div>`).join('')}
+        </div>
+
+        <div class="section">
+          <a href="https://app.hubspot.com/contacts/5843407/record/0-3/${d.id}" target="_blank" style="font-size:12px;color:#3d6594;text-decoration:none">↗ Open in HubSpot</a>
+        </div>
+
+        <div class="comments">
+          <h4 style="font-size:11.5px;font-weight:700;color:#4a5664;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Discussion</h4>
+          <div id="comments-${idAttr}"></div>
+          <div class="comment-form">
+            <input type="text" placeholder="Add a comment (visible to anyone viewing this dashboard)…" id="ci-${idAttr}" onkeydown="if(event.key==='Enter')addComment('${idAttr}')">
+            <button onclick="addComment('${idAttr}')">Post</button>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+}
+
+function renderDeals(){
+  const c=document.getElementById('dealList');
+  c.innerHTML='<div class="card"><h2>T0 Deal-by-Deal Audit</h2><small class="muted">Click a deal to see the full audit lens, evidence, gaps, forward risks, and add a comment</small><div id="dealCards" style="margin-top:10px"></div></div>';
+  const dc=document.getElementById('dealCards');
+  T0_DEALS.forEach(d=>{ dc.insertAdjacentHTML('beforeend', buildDealCard(d, '')); });
+}
+
+function renderNT(){
+  const c=document.getElementById('dealListNT');
+  // Enrich each non-T0 deal with audit, gaps, fwd, risk
+  const enriched = NONT0_DEALS.map(d=>{
+    const r = deriveRisk(d);
+    return {...d, ...r, audit: deriveAudit(d), gaps: deriveGaps(d), fwd: deriveFwd(d)};
+  });
+  // Sort: high risk first, then by score desc
+  const riskOrder={high:0,med:1,low:2};
+  enriched.sort((a,b)=>{
+    if(riskOrder[a.risk]!==riskOrder[b.risk]) return riskOrder[a.risk]-riskOrder[b.risk];
+    return (Number(b.score)||0) - (Number(a.score)||0);
+  });
+  c.innerHTML = '';
+  enriched.forEach(d=>{ c.insertAdjacentHTML('beforeend', buildDealCard(d, 'nt')); });
+  // Stash for later access (e.g., comment rendering)
+  window._enrichedNT = enriched;
+}
+
+function setTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===t));
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+}
+
+function toggleDD(id){
+  const el=document.getElementById('dd-'+id);
+  el.classList.toggle('show');
+}
+function toggleDeal(id){
+  const el=document.getElementById('db-'+id);
+  el.classList.toggle('show');
+}
+
+function applyFilters(){
+  const o=document.getElementById('ownerFilter').value;
+  const s=document.getElementById('stageFilter').value;
+  const r=document.getElementById('riskFilter').value;
+  let count=0;
+  document.querySelectorAll('#dealList .deal').forEach(el=>{
+    const okO = o==='all' || el.dataset.owner===o;
+    const okS = s==='all' || el.dataset.stage===s;
+    const okR = r==='all' || el.dataset.risk===r;
+    const ok = okO && okS && okR;
+    el.classList.toggle('hidden', !ok);
+    if(ok) count++;
+  });
+  document.getElementById('visibleCount').textContent = `${count} deals shown`;
+}
+
+function applyFiltersNT(){
+  const o=document.getElementById('ownerFilterNT').value;
+  const t=document.getElementById('tierFilterNT').value;
+  const s=document.getElementById('stageFilterNT').value;
+  const r=document.getElementById('riskFilterNT').value;
+  let count=0;
+  document.querySelectorAll('#dealListNT .deal').forEach(el=>{
+    const okO = o==='all' || el.dataset.owner===o;
+    const okT = t==='all' || el.dataset.tier===t;
+    const okS = s==='all' || el.dataset.stage===s;
+    const okR = r==='all' || el.dataset.risk===r;
+    const ok = okO && okT && okS && okR;
+    el.classList.toggle('hidden', !ok);
+    if(ok) count++;
+  });
+  document.getElementById('visibleCountNT').textContent = `${count} deals shown`;
+}
+
+function addComment(dealKey){
+  const inp=document.getElementById('ci-'+dealKey);
+  const text=inp.value.trim();
+  if(!text) return;
+  if(!state.comments[dealKey]) state.comments[dealKey]=[];
+  state.comments[dealKey].push({text, ts:new Date().toLocaleString(), author:"You"});
+  inp.value="";
+  renderComments(dealKey);
+}
+
+function renderComments(dealKey){
+  const el=document.getElementById('comments-'+dealKey);
+  if(!el) return;
+  const list = state.comments[dealKey]||[];
+  if(!list.length){ el.innerHTML='<div style="font-size:12px;color:#7a8693;font-style:italic">No comments yet — add one below to flag risks, share intel, or assign next steps.</div>'; return; }
+  el.innerHTML = list.map(c=>`<div class="comment"><div class="meta">${c.author} · ${c.ts}</div><div>${c.text.replace(/</g,'&lt;')}</div></div>`).join('');
+}
+
+renderDeals();
+renderNT();
+T0_DEALS.forEach(d=>renderComments(d.id));
+NONT0_DEALS.forEach(d=>renderComments('nt-'+d.id));
+applyFilters();
+applyFiltersNT();
+</script>
+
+</div>
+</body>
+</html>
